@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import tw.edu.pu.csim.tcyang.myapplicationdigitalink.ui.theme.MyApplicationDigitalInkTheme
 
@@ -72,6 +74,34 @@ fun Doodle(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .size(300.dp)
                 .border(2.dp, Color.Gray)
+                .pointerInput(Unit) {
+                    // 監聽拖曳手勢
+                    detectDragGestures(
+                        onDragStart = { offset -> /* 手指按下 */
+                            // 按下：記錄 Path 起點
+                            val x = offset.x
+                            val y = offset.y
+                            path.moveTo(x, y)
+                        },
+                        onDrag = { change, dragAmount -> /* 手指移動 */
+                            // 消費拖曳事件（避免影響父層元件手勢）
+                            // 這個移動手勢已經被 Canvas 處理，請不要再傳給外層的其他元件
+                            change.consume()
+
+                            // 移動：拉線並加入點座標
+                            val x = change.position.x
+                            val y = change.position.y
+                            path.lineTo(x, y)
+
+                            // 複製出一個內容一模一樣、但記憶體位址全新的 Path 物件
+                            // 並指派回 path，藉此強制 Compose 重繪 Canvas 畫面
+                            val tempPath = Path()
+                            tempPath.addPath(path)
+                            path = tempPath
+                        },
+                        onDragEnd = { /* 手指離開 */ }
+                    )
+                }
         ) {
             // 繪製黑色路徑，透明度1 (不透明)，線條粗細10
             drawPath(path, Color.Black, 1f, Stroke(10f))
